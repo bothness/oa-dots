@@ -1,7 +1,7 @@
 export const colors = {
 	seq5: ['rgb(234, 236, 177)', 'rgb(169, 216, 145)', 'rgb(0, 167, 186)', 'rgb(0, 78, 166)', 'rgb(0, 13, 84)'],
 	div10: ['#67001f','#b2182b', '#d6604d','#f4a582', '#fddbc7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac', '#053061'],
-	cat: ['#86d1f7', '#f38b3c', '#cb3233', '#3453a4', '#8143b8', '#81d693', '#f9e33e']
+	cat: ['#3899c9', '#fb3640', '#fff07c', '#89ffa7', '#e8800c', '#a799b7']
 };
 
 export const dataurl = "https://raw.githubusercontent.com/ONSvisual/census-data-v2/main/csv/variable/";

@@ -6,7 +6,7 @@
 	import MapCodes from "./MapCodes.svelte";
 	import Icon from "./Icon.svelte";
 	import { getData, getColor, getCentroid, setUnion, setDifference, sleep } from "./utils";
-	import { colors, dataurl, datasets, boundSources, dotSources, baseMaps, bounds , layerNames } from "./config";
+	import { colors, dataurl, datasets, boundSources, dotSources, baseMaps, bounds, layerNames } from "./config";
 	
 	// Bindings
 	let map = null;
@@ -193,35 +193,49 @@
 	}
 	$: toggleLayers(count);
 
-	function updateDots() {
-		let features = map.queryRenderedFeatures({layers: [active + '-dots']});
+	async function updateDotsAll() {
+		sleep(250);
+		
+		let source = active + '-dots';
+		let features = map.queryRenderedFeatures({layers: [source]});
 		let dot_id = dotSources.find(d => d.id.split('-')[0] == active).promoteId;
 
-		dots = features.length;
-		console.log(`updating ${dots} dots`);
+		if (dots != features.length) {
+			dots = features.length;
+			console.log(`updating all ${dots} visible dots`);
 
-		for (const f of features) {
-			let id = f.properties[dot_id];
+			updateDots(source, features.map(f => f.properties[dot_id]));
+		}
+	}
+
+	function updateDotsList(source, codes) {
+		console.log(`updating ${codes.length} dots`);
+
+		updateDots(source, codes);
+	}
+
+	function updateDots(source, ids) {
+		for (const id of ids) {
 			let area = id.slice(0, 9);
 			let dot = +id.slice(9);
 			let brks = breaks[area];
 
 			map.setFeatureState({
-				source: active + '-dots',
+				source: source,
 				sourceLayer: 'oa11dots',
 				id
 			}, {
-				color: brks && dot <= brks[brks.length - 1] ? getColor(dot, brks, colors.cat) : "rgba(255,255,255,0)"
+				color: brks ? getColor(dot, brks, colors.cat) : "rgba(255,255,255,0)"
 			});
 		}
-	}
+	} 
 
-	function loadedUpdateDots(requested, files) {
-		if (requested > 0 && files == requested) {
-			map.once('idle', updateDots);
-		}
-	}
-	$: loadedUpdateDots(requested, files); // Method for updating dots only when all pending data files are loaded
+	// function loadedUpdateDots(requested, files) {
+	// 	if (requested > 0 && files == requested) {
+	// 		map.once('idle', updateDots);
+	// 	}
+	// }
+	// $: loadedUpdateDots(requested, files); // Method for updating dots only when all pending data files are loaded
 
 	async function updateDataset() {
 		data = {};
@@ -235,6 +249,22 @@
 		preloadData();
 		if (['oa', 'msoa'].includes(active)) {
 			mapCodes[active].getCodes();
+		}
+	}
+
+	async function getTiles(e) {
+		await sleep(250);
+
+		let source = e.sourceId;
+		if (e.dataType == "source" && e.coord && ["lad-dots", "msoa-dots", "oa-dots"].includes(source)) {
+			let result = [];
+			let can = e.coord.canonical;
+			let tile = map.style.sourceCaches[source]._tiles[can.key];
+			if (tile) {
+				tile.querySourceFeatures(result, ({sourceLayer: "oa11dots", validate: false}));
+				console.log(source, can.key, result);
+				updateDotsList(source, result.map(feature => feature.id));
+			}
 		}
 	}
 
@@ -287,7 +317,7 @@
 </aside>
 
 <main bind:clientHeight={h} bind:clientWidth={w}>
-	<Map id="map" style={baseMaps.onsMask} location={{bounds: bounds.ew}} maxzoom={14} bind:map bind:zoom controls={true} on:load={map.once('idle', updateDots)}>
+	<Map id="map" style={baseMaps.onsMask} location={{bounds: bounds.ew}} maxzoom={14} bind:map bind:zoom controls={true} on:load={() => { map.on('moveend', () => map.once('idle', updateDotsAll)); map.on('sourcedata', (e) => getTiles(e)); }}>
 		{#each boundSources as source}
 		<MapSource {...source}>
 			<MapLayer
@@ -306,7 +336,7 @@
 				paint={{
 					'line-color': ['case',
 						['==', ['feature-state', 'hovered'], true], 'orange',
-						'rgba(0,0,0,0.1)'
+						'rgba(255,255,255,0.25)'
 					],
 					'line-width': ['case',
 						['==', ['feature-state', 'hovered'], true], 2,
@@ -341,7 +371,7 @@
 		{/each}
 		{/if}
 		<MapSource id="selected" type="geojson" data={{'type': 'FeatureCollection', 'features': []}}>
-			<MapLayer id="selected" type="line" paint={{'line-color': 'black', 'line-width': 2.5}}/>
+			<MapLayer id="selected" type="line" paint={{'line-color': 'white', 'line-width': 2.5}}/>
 		</MapSource>
 		{#each ['msoa', 'oa'] as key}
 		{#if quads[key]}
@@ -355,7 +385,7 @@
 		{#if centroids}
 		<MapSource id="centroids" type="geojson" data={centroids}>
 			<MapLayer id="centroids" type="circle" paint={{'circle-color': 'rgba(255,255,255,0)'}}>
-				<MapCount bind:count on:moveend={() => map.once('idle', updateDots)}/>
+				<MapCount bind:count/>
 			</MapLayer>
 		</MapSource>
 		{/if}

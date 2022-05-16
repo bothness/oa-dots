@@ -17,12 +17,12 @@ export async function getTopo(url, layer) {
 }
 
 export function getColor(val, breaks, colors) {
-  for (let i = 0; i < breaks.length - 1; i ++) {
+  for (let i = 0; i < breaks.length; i ++) {
     if (val <= breaks[i]) {
       return colors[i];
     }
   }
-  return colors[breaks.length - 1];
+  return "rgba(255,255,255,0)";
 }
 
 export function getBreaks(vals, count=5) {
