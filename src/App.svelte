@@ -258,11 +258,10 @@
 		let source = e.sourceId;
 		if (e.dataType == "source" && e.coord && ["lad-dots", "msoa-dots", "oa-dots"].includes(source)) {
 			let result = [];
-			let can = e.coord.canonical;
-			let tile = map.style.sourceCaches[source]._tiles[can.key];
+			let tile_id = e.coord.canonical.key;
+			let tile = map.style.sourceCaches[source]._tiles[tile_id];
 			if (tile) {
 				tile.querySourceFeatures(result, ({sourceLayer: "oa11dots", validate: false}));
-				console.log(source, can.key, result);
 				updateDotsList(source, result.map(feature => feature.id));
 			}
 		}
